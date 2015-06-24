@@ -28,6 +28,7 @@ CART树的数据结构
 
 ## 使用说明
 python forest.py train_data_path predict_data_path result_data_path
+
 python forest.py data/train.csv data/test.csv data/result.csv
 
 ## 参数说明

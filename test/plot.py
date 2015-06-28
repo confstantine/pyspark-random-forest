@@ -1,57 +1,75 @@
-# coding:utf-8
-import sys
-import matplotlib.pyplot as plt
-from numpy.random import rand
+# coding=utf-8  
+  
+''''' 
+作者:Jairus Chan 
+程序:多项式曲线拟合算法 
+'''  
+import matplotlib.pyplot as plt  
+import math  
+import numpy  
+import random  
+  
+fig = plt.figure()  
+ax = fig.add_subplot(111)  
+  
+#阶数为9阶  
+order=3
 
-color = [('yellow', 0.8), ('blue', 0.3)]
+#生成的曲线上的各个点偏移一下，并放入到xa,ya中去  
+i=0  
+xa=[0, 1, 10, 50, 100, 200, 400, 500]  
+ya=[0.0, 81.827, 96.365, 98.075, 98.503, 98.743, 99.0, 100.0]  
+ax.plot(xa,ya,color='m',linestyle='',marker='.')  
+  
+  
+#进行曲线拟合  
+matA=[]  
+for i in range(0,order+1):  
+    matA1=[]  
+    for j in range(0,order+1):  
+        tx=0.0  
+        for k in range(0,len(xa)):  
+            dx=1.0  
+            for l in range(0,j+i):  
+                dx=dx*xa[k]  
+            tx+=dx  
+        matA1.append(tx)  
+    matA.append(matA1)  
+  
+#print(len(xa))  
+#print(matA[0][0])  
+matA=numpy.array(matA)  
+  
+matB=[]  
+for i in range(0,order+1):  
+    ty=0.0  
+    for k in range(0,len(xa)):  
+        dy=1.0  
+        for l in range(0,i):  
+            dy=dy*xa[k]  
+        ty+=ya[k]*dy  
+    matB.append(ty)  
+   
+matB=numpy.array(matB)  
+  
+matAA=numpy.linalg.solve(matA,matB)  
+  
+#画出拟合后的曲线  
+#print(matAA)  
+xxa= numpy.arange(0,500,10)  
+yya=[]  
+for i in range(0,len(xxa)):  
+    yy=0.0  
+    for j in range(0,order+1):  
+        dy=1.0  
+        for k in range(0,j):  
+            dy*=xxa[i]  
+        dy*=matAA[j]  
+        yy+=dy  
+    yya.append(yy)  
+ax.plot(xxa,yya,color='g',linestyle='-',marker='')  
+  
+ax.set_xticks(numpy.linspace(0,500,100))
 
-# 将两组点绘制在同一张图上
-def plot(aPoints, bPoints):
-  points = [aPoints, bPoints]
-  for index, point in enumerate(points):
-    showOnePlot(index, point)
-  plt.legend()
-  plt.grid(True)
-  plt.show()
-
-# 将一组点绘制在图上
-def showOnePlot(index, points):
-  plt.scatter(points[0], points[1], c=color[index][0], alpha=color[index][1], s=100, edgecolors='none')
-
-def get_points(filePath):
-  points = [[], []]
-  for index, line in enumerate(open(filePath, 'r')):
-    if 'id' in line:
-      continue
-    items = line.split(',')
-    label = int(items[-1])
-    # features = hash(','.join(items[1:-1]))
-    key = index
-    points[0].append(key)
-    points[1].append(label)
-  return points
-
-if __name__ == "__main__":
-  if len(sys.argv) != 3:
-    print '''
-Usage:
-  python plot.py predict_path result_path
-'''
-  # 读取预测数据集以及预测结果数据集
-  predictData = [[], []]
-  resultData = [[], []]
-  for line in open(sys.argv[1], 'r'):
-    items = line.split(',')
-    label = int(items[-1])
-    key = hash(','.join(items[1:-1]))
-    predictData[0].append(key)
-    resultData[0].append(key)
-    predictData[1].append(label)
-  for line in open(sys.argv[2], 'r'):
-    if 'id' in line:
-      continue
-    items = line.split(',')
-    label = int(items[-1])
-    resultData[1].append(label)
-
-  plot(predictData, resultData)
+ax.legend()  
+plt.show()  

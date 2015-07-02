@@ -2,10 +2,10 @@
 
 from pyspark import SparkConf, SparkContext
 from tree import tree
-from util import log, get_file_path, get_data, get_random_sample, write_result
+from util import log, get_file_path, get_data, get_random_sample, write_result, get_argument
 
 PARAMS = {
-	'forestSize' : 500,
+	'forestSize' : 100,
 	'featuresAmount' : 0.1,
 	'sampleAmount' : 1,
         'slavesAmount' : 5,
@@ -29,13 +29,16 @@ def predict_tree_of_forest(record):
         return myDict[0][0]
 
 if __name__ == '__main__':
+        args = get_argument()
+        PARAMS['forestSize'] = int(args['ta'])
+        PARAMS['featuresAmount'] = float(args['fp'])
         # 申明spark变量
         sconf = SparkConf().setMaster('local[%d]' % PARAMS['slavesAmount']).setAppName('Purchase')
         sc = SparkContext(conf=sconf)
         # 将PARAMS设置为广播变量
         shared_params = sc.broadcast(PARAMS)
 	# 获取训练数据与预测数据路径
-	(trainDataPath, predictDataPath, resultPath) = get_file_path()
+	(trainDataPath, predictDataPath, resultPath) = (args['td'], args['pd'], args['rd'])
 	# 读取训练数据
 	log('log;data', 'Start to read training data!')
 	trainRecords = get_data(trainDataPath)

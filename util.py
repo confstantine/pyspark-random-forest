@@ -19,11 +19,27 @@ def log(lType, cntnt):
 	for item in cntnts:
 		print t + '[' + timestamp + ']', '\t\t', item
 
+def get_argument():
+  args = '\t'.join(sys.argv[1:])
+  args = args.split('-')[1:]
+  result = {}
+  for arg in args:
+    cArg = arg.strip().split('\t')
+    if len(cArg) != 2:
+      log('error', 'There is something wrong with the parameters you provided!')
+      exit(0)
+    result[cArg[0]] = cArg[1]
+  return result
+
 # 打印帮助信息
 def help():
 	print '''
 usage:
-  python forest.py train_data_path predict_data_path predict_result_path
+  -td\t:\tpath of the training dataset
+  -pd\t:\tpath of the predicting dataset
+  -rd\t:\tpath of the result
+  -ta\t:\tamount of the tree in the forest
+  -fp\t:\tpercentage of the features
 	'''
 
 # 获取训练样本路径以及测试样本路径

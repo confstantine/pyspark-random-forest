@@ -4,7 +4,14 @@ from collections import Counter
 
 
 class Node:
-    def __init__(self, samples, y, feature_ids=None, min_child_weight=0.1, min_child_nums=3):
+    def __init__(
+            self,
+            samples,
+            y,
+            feature_ids=None,
+            min_child_weight=0.1,
+            min_child_nums=3
+    ):
         """
 
         :param samples: numpy.array (n_samples, n_selected_features)
@@ -23,7 +30,10 @@ class Node:
         self.feature_ids = feature_ids
         assert len(samples.shape) == 2
 
-        is_category = [item.is_integer() for item in samples[0].tolist()]
+        is_category = [
+            item.is_integer()
+            for item in samples[0].tolist()
+        ]
 
         self.min_gini = 1
         best_split = None
@@ -47,6 +57,7 @@ class Node:
         if len(self.samples) < self.min_child_nums or self.min_gini < self.min_child_weight:
             self.label = Counter(self.y).most_common(1)[0][0]
             return
+
         if self.split:
             self.children = []
             left_idx = self.samples[:, self.split_feature] <= self.split
@@ -57,6 +68,7 @@ class Node:
                 self.min_child_weight,
                 self.min_child_nums
             ))
+
             self.children.append(Node(
                 self.samples[~left_idx],
                 self.y[~left_idx],
@@ -64,6 +76,7 @@ class Node:
                 self.min_child_weight,
                 self.min_child_nums
             ))
+
             for child in self.children:
                 child.create()
         else:
@@ -102,7 +115,11 @@ class Node:
 
 
 class CART:
-    def __init__(self, min_child_weight=0.1, min_child_nums=2, max_features='sqrt'):
+    def __init__(
+            self,
+            min_child_weight=0.1,
+            min_child_nums=2,
+            max_features='sqrt'):
         self.min_child_weight = min_child_weight
         self.min_child_nums = min_child_nums
         self.max_features = max_features
@@ -144,9 +161,8 @@ if __name__ == "__main__":
     from sklearn.datasets import make_classification
     start = time.time()
     cart = CART()
-    X, y = make_classification(n_samples=100, n_features=20, n_classes=2)
+    X, y = make_classification(n_samples=200, n_features=50, n_classes=2)
     feature_ids = np.random.choice(range(X.shape[1]), int(np.sqrt(X.shape[1])), replace=False)
-    # profile.run("cart.fit(X[:70, feature_ids], y[:70], feature_ids)")
     cart.fit(X[:70, feature_ids], y[:70], feature_ids)
     end = time.time()
     print(end-start)

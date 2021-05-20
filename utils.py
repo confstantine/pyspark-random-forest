@@ -47,7 +47,6 @@ def cal_numeric_gain_gini(x, y):
 
 if __name__ == "__main__":
     import time
-    # x = np.random.randint(0, 5, size=(100, ))
     x = np.random.normal(size=(100,))
     y = np.random.randint(0, 2, size=(100, ))
     start = time.process_time()

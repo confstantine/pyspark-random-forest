@@ -15,7 +15,7 @@ def train(tree, X, y):
     if tree.max_features == "sqrt":
         feats_num = int(np.sqrt(cols))
     elif tree.max_features == "log":
-        feats_num = int(np.log(cols))
+        feats_num = int(np.log2(cols))
     elif isinstance(tree.max_features, float):
         feats_num = int(cols * tree.max_features)
     else:
@@ -39,7 +39,6 @@ class RandomForest:
         self.max_features = max_features
         self.trees = None
         self.trees_rdd = None
-        # self.trees = sc.parallelize(self.trees)
 
     def fit(self, X, y):
         self.trees = sc.parallelize(

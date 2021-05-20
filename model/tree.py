@@ -3,13 +3,8 @@ from utils import cal_category_gain_gini, cal_numeric_gain_gini
 from collections import Counter
 
 
-MIN_CHILD_WEIGHT = 0.1
-MIN_CHILD_NUMS = 3
-N_JOBS = 5
-
-
 class Node:
-    def __init__(self, samples, y, feature_ids=None):
+    def __init__(self, samples, y, feature_ids=None, min_child_weight=0.1, min_child_nums=3):
         """
 
         :param samples: numpy.array (n_samples, n_selected_features)
@@ -18,6 +13,9 @@ class Node:
         """
         self.samples = samples
         self.y = y
+        self.min_child_weight = min_child_weight
+        self.min_child_nums = min_child_nums
+
         self.split_feature = None
         self.split = None
         self.children = None
@@ -46,7 +44,7 @@ class Node:
             self.split = best_split
 
     def create(self):
-        if len(self.samples) < MIN_CHILD_NUMS or self.min_gini < MIN_CHILD_WEIGHT:
+        if len(self.samples) < self.min_child_nums or self.min_gini < self.min_child_weight:
             self.label = Counter(self.y).most_common(1)[0][0]
             return
         if self.split:
@@ -54,11 +52,17 @@ class Node:
             left_idx = self.samples[:, self.split_feature] <= self.split
             self.children.append(Node(
                 self.samples[left_idx],
-                self.y[left_idx]
+                self.y[left_idx],
+                self.feature_ids,
+                self.min_child_weight,
+                self.min_child_nums
             ))
             self.children.append(Node(
                 self.samples[~left_idx],
-                self.y[~left_idx]
+                self.y[~left_idx],
+                self.feature_ids,
+                self.min_child_weight,
+                self.min_child_nums
             ))
             for child in self.children:
                 child.create()
@@ -68,7 +72,10 @@ class Node:
             self.children = {
                 cat: Node(
                     self.samples[tmp == cat],
-                    self.y[tmp == cat]
+                    self.y[tmp == cat],
+                    self.feature_ids,
+                    self.min_child_weight,
+                    self.min_child_nums
                 )
                 for cat in categories
             }
@@ -95,13 +102,16 @@ class Node:
 
 
 class CART:
-    def __init__(self):
+    def __init__(self, min_child_weight=0.1, min_child_nums=2, max_features='sqrt'):
+        self.min_child_weight = min_child_weight
+        self.min_child_nums = min_child_nums
+        self.max_features = max_features
         self.is_fit = False
         self.node = None
         self.feature_ids = None
 
     def fit(self, X, y, feature_ids):
-        self.node = Node(X, y, feature_ids)
+        self.node = Node(X, y, feature_ids, self.min_child_weight, self.min_child_nums)
         self.node.create()
         self.is_fit = True
         self.feature_ids = feature_ids
@@ -112,23 +122,34 @@ class CART:
             pred.append(self.node.predict(x))
         return pred
 
-    @staticmethod
+    @property
     def max_depth(self):
-        raise NotImplementedError
+        depth = 0
+        stack = [self.node]
+        while stack:
+            for node in stack:
+                stack.pop(0)
+                if node.children is not None:
+                    if isinstance(node.children, list):
+                        stack += node.children
+                    else:
+                        stack += node.children.values()
+            depth += 1
+        return depth
 
 
 if __name__ == "__main__":
-    import profile
-    from sklearn.metrics import classification_report
     import time
-    X = np.random.normal(size=(100, 50))
-    y = np.random.randint(0, 2, size=(100, ))
+    from sklearn.metrics import classification_report
+    from sklearn.datasets import make_classification
     start = time.time()
     cart = CART()
-    feature_ids = np.random.choice(range(10), int(np.sqrt(10)), replace=False)
+    X, y = make_classification(n_samples=100, n_features=20, n_classes=2)
+    feature_ids = np.random.choice(range(X.shape[1]), int(np.sqrt(X.shape[1])), replace=False)
     # profile.run("cart.fit(X[:70, feature_ids], y[:70], feature_ids)")
     cart.fit(X[:70, feature_ids], y[:70], feature_ids)
     end = time.time()
     print(end-start)
     print(classification_report(y[70:], cart.predict(X[70:])))
+    print(cart.max_depth)
 

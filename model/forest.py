@@ -37,6 +37,7 @@ class RandomForest:
         self.min_child_weight = min_child_weight
         self.min_child_nums = min_child_nums
         self.max_features = max_features
+        self.n_class = None
         self.trees = None
         self.trees_rdd = None
 
@@ -50,6 +51,7 @@ class RandomForest:
         self.trees = self.trees.map(
             lambda item: train(item[0], item[1], item[2])
         ).collect()
+        self.n_class = len(np.unique(y))
 
     def predict(self, X):
         assert len(X.shape) == 2
@@ -59,9 +61,24 @@ class RandomForest:
         labels = [Counter(x).most_common(1)[0][0] for x in pred_rdd]
         return labels
 
+    def predict_prob(self, X):
+        assert len(X.shape) == 2
+        self.trees_rdd = sc.parallelize([(tree, X) for tree in self.trees])
+        pred_rdd = self.trees_rdd.map(lambda item: item[0].predict(item[1])).collect()
+        pred_rdd = np.array(pred_rdd).transpose()
+
+        def cal_prob(x):
+            prob = []
+            cnt = Counter(x)
+            for i in range(self.n_class):
+                prob.append(cnt.get(i, 0) / self.n_estimators)
+            return prob
+
+        return np.array([cal_prob(x) for x in pred_rdd])
+
 
 if __name__ == "__main__":
-    from sklearn.metrics import classification_report
+    from sklearn.metrics import classification_report, roc_auc_score
     from sklearn.datasets import make_classification
     import time
     rf = RandomForest(100)
@@ -71,6 +88,9 @@ if __name__ == "__main__":
     end = time.time()
     print(f"train using {end-start}")
     pred = rf.predict(X[140:])
+    pred_probs = rf.predict_prob(X[140:])[:, 1]
     end2 = time.time()
     print(f"predict using {end2-end}")
     print(classification_report(y[140:], pred))
+    print(roc_auc_score(y[140:], pred_probs))
+

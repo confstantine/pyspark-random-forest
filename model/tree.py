@@ -9,8 +9,9 @@ class Node:
             samples,
             y,
             feature_ids=None,
+            is_category=None,
             min_child_weight=0.1,
-            min_child_nums=3
+            min_child_nums=2
     ):
         """
 
@@ -22,18 +23,15 @@ class Node:
         self.y = y
         self.min_child_weight = min_child_weight
         self.min_child_nums = min_child_nums
+        self.is_category = is_category
 
+        self.gini = []
         self.split_feature = None
         self.split = None
         self.children = None
         self.label = None
         self.feature_ids = feature_ids
         assert len(samples.shape) == 2
-
-        is_category = [
-            item.is_integer()
-            for item in samples[0].tolist()
-        ]
 
         self.min_gini = 1
         best_split = None
@@ -43,18 +41,23 @@ class Node:
                 if gini < self.min_gini:
                     self.min_gini = gini
                     self.split_feature = ii
+                    self.gini.append(gini)
             else:
                 gini, split = cal_numeric_gain_gini(samples[:, ii], y)
                 if gini < self.min_gini:
                     self.min_gini = gini
                     self.split_feature = ii
                     best_split = split
+                    self.gini.append(gini)
 
         if not is_category[self.split_feature]:
             self.split = best_split
 
     def create(self):
-        if len(self.samples) < self.min_child_nums or self.min_gini < self.min_child_weight:
+        if len(self.samples) <= self.min_child_nums \
+                or self.min_gini <= self.min_child_weight \
+                or len(np.unique(self.y)) == 1 \
+                or len(np.unique(self.gini)) == 1:
             self.label = Counter(self.y).most_common(1)[0][0]
             return
 
@@ -65,6 +68,7 @@ class Node:
                 self.samples[left_idx],
                 self.y[left_idx],
                 self.feature_ids,
+                self.is_category,
                 self.min_child_weight,
                 self.min_child_nums
             ))
@@ -73,6 +77,7 @@ class Node:
                 self.samples[~left_idx],
                 self.y[~left_idx],
                 self.feature_ids,
+                self.is_category,
                 self.min_child_weight,
                 self.min_child_nums
             ))
@@ -87,6 +92,7 @@ class Node:
                     self.samples[tmp == cat],
                     self.y[tmp == cat],
                     self.feature_ids,
+                    self.is_category,
                     self.min_child_weight,
                     self.min_child_nums
                 )
@@ -109,7 +115,10 @@ class Node:
                 else:
                     return self.children[1].predict(x)
             else:
-                return self.children[x[split_feature]].predict(x)
+                try:
+                    return self.children[x[split_feature]].predict(x)
+                except:
+                    return
         else:
             return self.label
 
@@ -127,8 +136,8 @@ class CART:
         self.node = None
         self.feature_ids = None
 
-    def fit(self, X, y, feature_ids):
-        self.node = Node(X, y, feature_ids, self.min_child_weight, self.min_child_nums)
+    def fit(self, X, y, feature_ids, is_category):
+        self.node = Node(X, y, feature_ids, is_category, self.min_child_weight, self.min_child_nums)
         self.node.create()
         self.is_fit = True
         self.feature_ids = feature_ids
@@ -158,14 +167,20 @@ class CART:
 if __name__ == "__main__":
     import time
     from sklearn.metrics import classification_report
-    from sklearn.datasets import make_classification
+    import pandas as pd
+
+    trains = pd.read_csv("../data/train.csv", header=None, index_col=None)
+    is_category = np.array([trains.dtypes[i] != np.float for i in range(len(trains.columns)-1)])
+    train_X = trains.iloc[:, :-1].values
+    train_y = trains.iloc[:, -1].values
+    tests = pd.read_csv("../data/test.csv", header=None, index_col=None)
+    test_X = tests.iloc[:, :-1].values
+    test_y = tests.iloc[:, -1].values
     start = time.time()
     cart = CART()
-    X, y = make_classification(n_samples=200, n_features=50, n_classes=2)
-    feature_ids = np.random.choice(range(X.shape[1]), int(np.sqrt(X.shape[1])), replace=False)
-    cart.fit(X[:70, feature_ids], y[:70], feature_ids)
+    cart.fit(train_X, train_y, list(range(train_X.shape[1])), is_category)
     end = time.time()
     print(end-start)
-    print(classification_report(y[70:], cart.predict(X[70:])))
+    print(classification_report(test_y, cart.predict(test_X)))
     print(cart.max_depth)
 

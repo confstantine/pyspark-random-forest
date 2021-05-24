@@ -33,8 +33,9 @@ def cal_category_gain_gini(x, y):
 def cal_numeric_gain_gini(x, y):
     min_gini = 1
     best_split = None
-    for split in np.linspace(x.min(), x.max(), 50, endpoint=True):
-        left_idx = x <= split
+    splits = np.linspace(x.min()+0.0001, x.max()-0.0001, 50, endpoint=True) if len(np.unique(x)) <= 50 else x
+    for split in splits:
+        left_idx = (x <= split)
         left = y[left_idx]
         right = y[~left_idx]
         gini = (len(left) * cal_gini(left) + len(right) * cal_gini(right)) / len(x)

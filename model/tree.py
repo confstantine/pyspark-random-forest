@@ -34,24 +34,16 @@ class Node:
         assert len(samples.shape) == 2
 
         self.min_gini = 1
-        best_split = None
         for ii in range(samples.shape[1]):
             if is_category[ii]:
-                gini = cal_category_gain_gini(samples[:, ii], y)
-                if gini < self.min_gini:
-                    self.min_gini = gini
-                    self.split_feature = ii
-                    self.gini.append(gini)
+                gini, split = cal_category_gain_gini(samples[:, ii], y)
             else:
                 gini, split = cal_numeric_gain_gini(samples[:, ii], y)
-                if gini < self.min_gini:
-                    self.min_gini = gini
-                    self.split_feature = ii
-                    best_split = split
-                    self.gini.append(gini)
-
-        if not is_category[self.split_feature]:
-            self.split = best_split
+            if gini < self.min_gini:
+                self.min_gini = gini
+                self.split_feature = ii
+                self.gini.append(gini)
+                self.split = split
 
     def create(self):
         if len(self.samples) <= self.min_child_nums \
@@ -61,45 +53,32 @@ class Node:
             self.label = Counter(self.y).most_common(1)[0][0]
             return
 
-        if self.split:
-            self.children = []
-            left_idx = self.samples[:, self.split_feature] <= self.split
-            self.children.append(Node(
-                self.samples[left_idx],
-                self.y[left_idx],
-                self.feature_ids,
-                self.is_category,
-                self.min_child_weight,
-                self.min_child_nums
-            ))
-
-            self.children.append(Node(
-                self.samples[~left_idx],
-                self.y[~left_idx],
-                self.feature_ids,
-                self.is_category,
-                self.min_child_weight,
-                self.min_child_nums
-            ))
-
-            for child in self.children:
-                child.create()
+        if self.is_category[self.split_feature]:
+            left_idx = self.samples[:, self.split_feature] == self.split
         else:
-            tmp = self.samples[:, self.split_feature]
-            categories = np.unique(tmp)
-            self.children = {
-                cat: Node(
-                    self.samples[tmp == cat],
-                    self.y[tmp == cat],
-                    self.feature_ids,
-                    self.is_category,
-                    self.min_child_weight,
-                    self.min_child_nums
-                )
-                for cat in categories
-            }
-            for child in self.children.values():
-                child.create()
+            left_idx = self.samples[:, self.split_feature] <= self.split
+        self.children = []
+        self.children.append(Node(
+            self.samples[left_idx],
+            self.y[left_idx],
+            self.feature_ids,
+            self.is_category,
+            self.min_child_weight,
+            self.min_child_nums
+        ))
+
+        self.children.append(Node(
+            self.samples[~left_idx],
+            self.y[~left_idx],
+            self.feature_ids,
+            self.is_category,
+            self.min_child_weight,
+            self.min_child_nums
+        ))
+
+        for child in self.children:
+            child.create()
+
         self.samples = None
         self.y = None
 
@@ -109,16 +88,17 @@ class Node:
         else:
             split_feature = self.split_feature
         if self.children:
-            if self.split:
+            if not self.is_category[self.split_feature]:
                 if x[split_feature] <= self.split:
                     return self.children[0].predict(x)
                 else:
                     return self.children[1].predict(x)
             else:
-                try:
-                    return self.children[x[split_feature]].predict(x)
-                except:
-                    return
+                if x[split_feature] == self.split:
+                    return self.children[0].predict(x)
+                else:
+                    return self.children[1].predict(x)
+
         else:
             return self.label
 

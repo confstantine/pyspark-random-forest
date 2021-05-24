@@ -89,7 +89,7 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     import time
 
-    rf = RandomForest(200, max_features=0.6)
+    rf = RandomForest(200, max_features=0.5)
     trains = pd.read_csv("../data/train.csv", header=None, index_col=None)
     is_category = np.array([trains.dtypes[i] != np.float for i in range(len(trains.columns)-1)])
     train_X = trains.iloc[:, :-1].values

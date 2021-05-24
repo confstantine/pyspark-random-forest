@@ -17,23 +17,25 @@ def cal_category_gain_gini(x, y):
     """
     :param x: (n_samples, )
     :param y: (n_samples, )
-    :return: tuple: (split, min_gini)
+    :return: tuple: (min_gini, split)
     """
 
-    list_gini = []
+    min_gini = 1
+    best_split = None
     categories = np.unique(x)
     for cat in categories:
-        chosens = y[x == cat]
-        gini = cal_gini(chosens)
-        nums = len(chosens)
-        list_gini.append(gini * nums)
-    return sum(list_gini) / len(x)
+        chosens = (x == cat)
+        gini = (cal_gini(y[chosens]) * chosens.sum() + cal_gini(y[~chosens]) * (~chosens).sum()) / len(x)
+        if gini < min_gini:
+            min_gini = gini
+            best_split = cat
+    return min_gini, best_split
 
 
 def cal_numeric_gain_gini(x, y):
     min_gini = 1
     best_split = None
-    splits = np.linspace(x.min()+0.0001, x.max()-0.0001, 50, endpoint=True) if len(np.unique(x)) <= 50 else x
+    splits = np.linspace(x.min()+0.0001, x.max()-0.0001, 50, endpoint=True) if len(np.unique(x)) > 50 else x
     for split in splits:
         left_idx = (x <= split)
         left = y[left_idx]
@@ -48,9 +50,9 @@ def cal_numeric_gain_gini(x, y):
 
 if __name__ == "__main__":
     import time
-    x = np.random.normal(size=(100,))
+    x = np.random.randint(0, 2, size=(100, ))
     y = np.random.randint(0, 2, size=(100, ))
     start = time.process_time()
-    print(cal_numeric_gain_gini(x, y))
+    print(cal_category_gain_gini(x, y))
     end = time.process_time()
     print(end-start)
